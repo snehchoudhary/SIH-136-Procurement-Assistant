@@ -1,0 +1,14 @@
+node_modules/
+frontend/dist/
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+*.pyc
+.env
+.DS_Store
+*.db
+backend/uploads/
+**/__pycache__/
+**/.pytest_cache/
+backend/.pytest-run*/
+backend/.pytest-tmp/

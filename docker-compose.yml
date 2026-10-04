@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pilotproof-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pilotproof}
+      POSTGRES_USER: ${POSTGRES_USER:-pilotproof}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a random POSTGRES_PASSWORD in .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: pilotproof-backend
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-}
+      POSTGRES_DB: ${POSTGRES_DB:-pilotproof}
+      POSTGRES_USER: ${POSTGRES_USER:-pilotproof}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a random POSTGRES_PASSWORD in .env}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      SECRET_KEY: ${SECRET_KEY:?Set a random SECRET_KEY in .env}
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_URL: ${LLM_API_URL:-https://api.openai.com/v1/chat/completions}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      BACKEND_HOST: ${BACKEND_HOST:-0.0.0.0}
+      BACKEND_PORT: ${BACKEND_PORT:-8000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: pilotproof-frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-}
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:8000}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
